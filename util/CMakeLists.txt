@@ -26,7 +26,7 @@ target_link_libraries (test_serial cutter)
 add_executable (draw_gcode draw_gcode.cpp gcode.cpp)
 target_link_libraries (draw_gcode cutter)
 
-add_executable (draw_svg draw_svg.cpp)
+add_executable (draw_svg draw_svg.cpp svg_render.cpp)
 target_link_libraries (draw_svg cutter svg jpeg png)
 
 add_executable (test_btea test_btea.cpp)
@@ -39,7 +39,7 @@ if(HAS_SDL)
     add_executable (draw_gcode_cv draw_gcode_cv.cpp gcode.cpp)
     target_link_libraries (draw_gcode_cv cutter jpeg png)
 
-    add_executable (draw_svg_cv draw_svg_cv.cpp)
+    add_executable (draw_svg_cv draw_svg_cv.cpp svg_render.cpp)
     target_link_libraries (draw_svg_cv cutter svg jpeg png)
 
     add_executable (interpreter_cv interpreter_cv.cpp)
