@@ -1,4 +1,7 @@
 //This file adapted from http://sites.google.com/site/drbobbobswebsite/cricut-gcode-interpreter
+
+#include <eigen3/Eigen/Geometry>
+
 #include <errno.h>
 #include <cmath>
 #include <map>
@@ -20,7 +23,7 @@ static enum debug_prio _debug;
 void gcode_base::debug_out(enum debug_prio debug_level, const string msg)
 {
      if (debug_level <= _debug)
-	  printf("%s\n", msg.c_str());
+	  std::cout << msg << std::endl;
 }
 
 void gcode_base::set_debug(enum debug_prio d)
@@ -36,9 +39,9 @@ void gcode_base::set_debug(enum debug_prio d)
 
      if( d > extra_debug ) {
           _debug = extra_debug;
-          debug_out(info, string("Debugging level set to maximum\n"));
+          debug_out(info, "Debugging level set to maximum");
      } else {
-          debug_out(info, string("Debugging level set to ")+debug_strings[_debug=d]+"\n");
+          debug_out(info, "Debugging level set to "+std::string(debug_strings[_debug=d]));
      }
 }
 
@@ -47,11 +50,9 @@ line::line(const xy &s, const xy &e, const bool c):
      end(e),
      cut(c)
 {
-     char buf[4096];
-     snprintf(buf, sizeof(buf),
-	      "New line: start (%f, %f), end (%f, %f) cut %s",
-	      start.x, start.y, end.x, end.y, cut ? "true": "false");
-     debug_out(extra_debug, string(buf));
+     std::stringstream buf;
+     buf<<"New line: start "<<start<<", end "<<end <<" cut " <<( cut ? "true": "false");
+     debug_out(extra_debug, buf.str());
 }
 
 line::~line()
@@ -60,23 +61,18 @@ line::~line()
 
 xy line::draw(Device::Generic &cutter)
 {
-     char buf[4096];
-
-     snprintf(buf, sizeof(buf),
-	      "%s from (%f, %f) to (%f, %f)",
-	      cut ? "Line" : "Rapid move",
-	      start.x, start.y, end.x, end.y);
-     debug_out(info, string(buf));
+     std::stringstream buf;
+     buf << ( cut ? "Line" : "Rapid move") << " from "<< start <<" to "<<end,
+     debug_out(info, buf.str());
 
      if (cut)
 	  cutter.cut_to(end);
      else
 	  cutter.move_to(end);
 
-     snprintf(buf, sizeof(buf),
-	      "Current position: %f, %f",
-	      end.x, end.y);
-     debug_out(debug, string(buf));
+     buf.seekp(0).clear();
+     buf << "Current position: " << end;
+     debug_out(debug, buf.str());
      return end;
 }
 
@@ -86,11 +82,9 @@ bezier::bezier(const xy &s, const xy &c1, const xy &c2, const xy &e):
      cp2(c2),
      end(e)
 {
-     char buf[4096];
-     snprintf(buf, sizeof(buf),
-	      "New bezier from (%f, %f) to (%f, %f)",
-	      start.x, start.y, end.x, end.y);
-     debug_out(extra_debug, string(buf));
+     std::stringstream buf;
+	buf<< "New bezier from "<< start <<" to "<<end;
+     debug_out(extra_debug,buf.str());
 }
 
 bezier::~bezier()
@@ -99,29 +93,26 @@ bezier::~bezier()
 
 xy bezier::draw(Device::Generic &cutter)
 {
-     char buf[4096];
+     std::stringstream buf;
 
-     snprintf(buf, sizeof(buf),
-	      "Bezier segment from (%f, %f) to (%f, %f)",
-	      start.x, start.y, end.x, end.y);
-     debug_out(info, string(buf));
+     buf<< "Bezier segment from "<< start <<" to "<<end;
+     debug_out(info, buf.str());
      cutter.curve_to(start, cp1, cp2, end);
-     snprintf(buf, sizeof(buf),
-	      "Current position: (%f, %f)",
-	      end.x, end.y);
-     debug_out(debug, string(buf));
+     buf.seekp(0).clear();
+     buf<<"Current position: "<<end;
+     debug_out(debug, buf.str());
      return end;
 }
 
 double arc::angle_between(const xy &vec1, const xy &vec2)
 {
-     return atan2(vec2.y, vec2.x) - atan2(vec1.y, vec1.x);
+     return atan2(vec2.y(), vec2.x()) - atan2(vec1.y(), vec1.x());
 }
 double arc::get_arcwidth(const xy & vec1, const xy & vec2)
 {
 //     printf("vec1: (%f, %f); vec2: (%f, %f)\n",vec1.x, vec1.y,
 //	    vec2.x, vec2.y);
-     double a1 = atan2(vec2.y, vec2.x) - atan2(vec1.y, vec1.x);
+     double a1 = atan2(vec2.y(), vec2.x()) - atan2(vec1.y(), vec1.x());
 //     printf("Arcwidth: %f", a1/M_PI);
 
      if (clockwise)
@@ -147,25 +138,18 @@ arc::arc(const xy &c, const xy &t, const xy &cv, const bool cw):
      clockwise(cw),
      k((4.0/3.0)*(sqrt(2.0) - 1.0))
 {
-     char buf[4096];
-     snprintf(buf, sizeof(buf),
-	      "New %s arc from (%f, %f) to (%f, %f)",
-	      clockwise ? "clockwise" : "anticlockwise",
-	      current.x, current.y, target.x, target.y);
-     debug_out(extra_debug, string(buf));
+     std::stringstream buf;
+     buf << "New "<< (clockwise ? "clockwise" : "anticlockwise") << " arc from " << current <<" to "<<target;
+     debug_out(extra_debug, buf.str());
 
      cseg = 0;
 
-     center.x = current.x + cvec.x;
-     center.y = current.y + cvec.y;
+     center = current + cvec;
 
      // target vector and current vector
-     xy tvec;
-     tvec.x = target.x - center.x;
-     tvec.y = target.y - center.y;
-     cvec.x = -(cvec.x);
-     cvec.y = -(cvec.y);
-     radius = sqrt(cvec.x*cvec.x + cvec.y*cvec.y);
+     auto tvec = target - center;
+     cvec = -cvec;
+     radius = cvec.norm();
 
      // We implement this using arcs of at most 90 degrees.
      // For arcs subtending more than 90 degrees we create
@@ -177,9 +161,7 @@ arc::arc(const xy &c, const xy &t, const xy &cv, const bool cw):
      // x-axis - we create the segments around the x-axis
      // and origin, then rotate them around the origin and 
      // translate to the defined center point.
-     xy x_axis;
-     x_axis.x = radius;
-     x_axis.y = 0;
+     xy x_axis{radius, 0};
      crot = angle_between(x_axis, cvec);
 
      // we rotate each segment so that the start point of the segment
@@ -204,12 +186,9 @@ arc::~arc()
 
 xy arc::draw(Device::Generic &cutter)
 {
-     char buf[4096];
-
-     snprintf(buf, sizeof(buf),
-	      "Arc from (%f, %f) to (%f, %f)",
-	      current.x, current.y, target.x, target.y);
-     debug_out(info, string(buf));
+     std::stringstream buf;
+     buf << "Arc from "<< current << " to " << target;
+     debug_out(info, buf.str());
 
      xy end;
      for(int i = 0; i < cseg; i++)
@@ -218,13 +197,11 @@ xy arc::draw(Device::Generic &cutter)
 	       end = segments[i]->draw(cutter);
      }
 
-     if (abs(end.x - target.x) > 0.000001 ||
-	 abs(end.y - target.y) > 0.000001)
+     if ((end - target).norm() > 0.000001)
 	  debug_out(warn, "Segment end points do not equal arc end points");
-     snprintf(buf, sizeof(buf),
-	      "Current position: (%f, %f)",
-	      target.x, target.y);
-     debug_out(debug, string(buf));
+     buf.seekp(0).clear();
+     buf<< "Current position: "<<target;
+     debug_out(debug, buf.str());
      return target;
 }
 
@@ -236,26 +213,24 @@ xy arc::draw(Device::Generic &cutter)
 // (accessed 2014-12-24)
 void arc::segment(double swidth, double rot)
 {
-     char buf[4096];
-     snprintf(buf, sizeof(buf),
-	      "Arc segment: center (%f, %f), arc width: %f, radius %f, rotation: %f",
-	      center.x, center.y, swidth/M_PI, radius, rot/M_PI);
-     debug_out(debug, string(buf));
+     std::stringstream buf;
+     buf<<"Arc segment: center "<<center<<", arc width: " <<swidth/M_PI<< ", radius " << radius << ", rotation: " <<rot/M_PI;
+     debug_out(debug, buf.str());
      xy pt1, pt2, pt3, pt4;
      double a = swidth/2;
 
      if (clockwise)
      {
 	  // construct the arc segment around the x-axis
-	  pt1.x = radius*cos(a);
-	  pt1.y = radius*sin(a);
-	  pt4.x = pt1.x;
-	  pt4.y = -pt1.y;
+	  pt1.x() = radius*cos(a);
+	  pt1.y() = radius*sin(a);
+	  pt4.x() = pt1.x();
+	  pt4.y() = -pt1.y();
 	  // get the control points
-	  pt3.x = pt4.x + k * tan(a) * pt1.y;
-	  pt3.y = pt4.y + k * tan(a) * pt1.x;
-	  pt2.x = pt3.x;
-	  pt2.y = -pt3.y;
+	  pt3.x() = pt4.x() + k * tan(a) * pt1.y();
+	  pt3.y() = pt4.y() + k * tan(a) * pt1.x();
+	  pt2.x() = pt3.x();
+	  pt2.y() = -pt3.y();
 	  // this segment was created with pt1 pointing at a - it
 	  // needs to be rotated by -a to point pt1 at the x axis,
 	  // then by crot to point it at the current point. It then
@@ -266,15 +241,15 @@ void arc::segment(double swidth, double rot)
      else
      {
 	  // construct the arc segment around the x-axis
-	  pt4.x = radius*cos(a);
-	  pt4.y = radius*sin(a);
-	  pt1.x = pt4.x;
-	  pt1.y = -pt4.y;
+	  pt4.x() = radius*cos(a);
+	  pt4.y() = radius*sin(a);
+	  pt1.x() = pt4.x();
+	  pt1.y() = -pt4.y();
 	  // get the control points
-	  pt2.x = pt1.x + k * tan(a) * pt4.y;
-	  pt2.y = pt1.y + k * tan(a) * pt4.x;
-	  pt3.x = pt2.x;
-	  pt3.y = -pt2.y;
+	  pt2.x() = pt1.x() + k * tan(a) * pt4.y();
+	  pt2.y() = pt1.y() + k * tan(a) * pt4.x();
+	  pt3.x() = pt2.x();
+	  pt3.y() = -pt2.y();
 	  // this time pt1 is pointing at -a, so the same set of
 	  // rotations (except for using +rot rather than -rot, since
 	  // this is anticlockwise) works out as (-(-a) + crot + rot),
@@ -283,38 +258,11 @@ void arc::segment(double swidth, double rot)
      }
 
      // rotate to the right spot
-     double cos_rot = cos(rot);
-     double sin_rot = sin(rot);
-     double a00 = cos_rot;
-     double a01 = -sin_rot;
-     double a10 = sin_rot;
-     double a11 = cos_rot;
-
-     double x, y;
-     x = pt1.x * a00 + a01 * pt1.y;
-     y = pt1.x * a10 + a11 * pt1.y;
-     pt1.x = x;
-     pt1.y = y;
-     x = pt2.x * a00 + a01 * pt2.y;
-     y = pt2.x * a10 + a11 * pt2.y;
-     pt2.x = x;
-     pt2.y = y;
-     x = pt3.x * a00 + a01 * pt3.y;
-     y = pt3.x * a10 + a11 * pt3.y;
-     pt3.x = x;
-     pt3.y = y;
-     x = pt4.x * a00 + a01 * pt4.y;
-     y = pt4.x * a10 + a11 * pt4.y;
-     pt4.x = x;
-     pt4.y = y;
-     pt1.x = pt1.x + center.x;
-     pt1.y = pt1.y + center.y;
-     pt2.x = pt2.x + center.x;
-     pt2.y = pt2.y + center.y;
-     pt3.x = pt3.x + center.x;
-     pt3.y = pt3.y + center.y;
-     pt4.x = pt4.x + center.x;
-     pt4.y = pt4.y + center.y;
+     Eigen::Rotation2Dd rotation{rot};
+     pt1 = rotation * pt1 + center;
+     pt2 = rotation * pt2 + center;
+     pt3 = rotation * pt3 + center;
+     pt4 = rotation * pt4 + center;
 
      // and put it into production . . .
      segments[cseg++] = new bezier( pt1, pt2, pt3, pt4 );
@@ -394,17 +342,17 @@ xy gcode::get_xy(std::map<char,float> & codes)
 {
 	xy retn = curr_pos;
 	if( codes.find('X') != codes.end() ) {
-		retn.x = doc_to_internal(codes['X']);
+		retn.x() = doc_to_internal(codes['X']);
 	}
 	if( codes.find('Y') != codes.end() ) {
-		retn.y = doc_to_internal(codes['Y']);
+		retn.y() = doc_to_internal(codes['Y']);
 	}
 	return retn;
 }
 
 xy gcode::get_vector(std::map<char,float> & codes)
 {
-	return (xy){ doc_to_internal(codes['I']), doc_to_internal(codes['J']) };
+	return { doc_to_internal(codes['I']), doc_to_internal(codes['J']) };
 }
 
 void gcode::process_movement(std::map<char,float> & codes)
@@ -420,10 +368,8 @@ void gcode::process_z_code(std::map<char,float> & codes)
 {
      if ( codes.find('Z') != codes.end() )
      {
-      char buf[4096];
 	  double z = doc_to_internal(codes['Z']);
-	  snprintf(buf, 4095, "Pen %s", (z >= 0) ? "up":"down");
-	  debug_out(debug, string(buf));
+	  debug_out(debug, "Pen " + std::string((z >= 0) ? "up":"down"));
 	  if(z >= 0)
 	       raise_pen();
 	  else
@@ -476,10 +422,8 @@ void gcode::process_g_code(std::map<char,float> & codes)
 {
      string val;
 
-     char buf[4096];
      int code = (int)(codes['G']+.5);
-     snprintf(buf, sizeof(buf), "Processing G code: %d", code);
-     debug_out(debug, string(buf));
+     debug_out(debug, "Processing G code: " + std::to_string(code));
      switch(code)
      {
      case 0:
@@ -520,8 +464,7 @@ void gcode::process_g_code(std::map<char,float> & codes)
 	  debug_out(info, "Relative coordinates requested but not supported");
 	  break;
      default:
-	  snprintf(buf, sizeof(buf), "Unhandled G command: %d", code);
-	  debug_out(debug, string(buf));
+	  debug_out(debug, "Unhandled G command: " + std::to_string(code));
 	  break;
      }
 }
@@ -533,10 +476,8 @@ void gcode::process_line_number(std::map<char,float> & codes)
 
 void gcode::process_misc_code(std::map<char,float> & codes)
 {
-     int code = (int)(codes['M']+0.5);
-     char buf[4096];
-     snprintf(buf, sizeof(buf), "Processing M code: %d", code);
-     debug_out(debug, string(buf));
+     int code = static_cast<int>(codes['M']+0.5);
+     debug_out(debug, "Processing M code: " + std::to_string(code));
 
      switch(code)
      {
@@ -548,8 +489,7 @@ void gcode::process_misc_code(std::map<char,float> & codes)
 	  throw false;
 	  break;
      default:
-	  snprintf(buf, sizeof(buf), "Unhandled M command %d", code);
-	  debug_out(debug, string(buf));
+	  debug_out(debug, "Unhandled M command " + std::to_string(code));
 	  break;
      }
 
@@ -600,7 +540,7 @@ return results;
 
 void gcode::parse_line(string input)
 {
-     debug_out(extra_debug, string("Processing line: ")+input);
+     debug_out(extra_debug, "Processing line: "+input);
      std::map<char,float> codes = parse_gcode( input );
 
      if ( codes.find('G') != codes.end() ) {
@@ -610,9 +550,7 @@ void gcode::parse_line(string input)
      } else if ( codes.find('M') != codes.end() ) {
           process_misc_code(codes);
      } else {
-	  string msg = "Unhandled command ";
-	  msg.append(input);
-	  debug_out(debug, msg);
+	  debug_out(debug, "Unhandled command " + input);
      }
 }
 
@@ -630,9 +568,7 @@ void gcode::parse_file(void)
 	  }
 	  catch(string msg)
 	  {
-               char buf[4096];
-	       snprintf(buf, sizeof(buf), "%s", msg.c_str());
-	       debug_out(err, string(buf));
+	       debug_out(err, msg);
 	  }
 	  catch(const std::out_of_range& oor)
 	  {

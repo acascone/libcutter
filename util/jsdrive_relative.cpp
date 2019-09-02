@@ -90,8 +90,7 @@ void * thread( void * ptr )
     pthread_mutex_lock(&status->mutex);
     while( status->running )
     {
-        temp.x = status->pt.x;
-        temp.y = status->pt.y;
+        temp = status->pt;
         if( status->tool_down )
         {
             pthread_mutex_unlock(&status->mutex);
@@ -120,8 +119,7 @@ int main (int argc, char **argv)
     char name[NAME_LENGTH] = "Unknown";
     run_data status;
     status.running = true;
-    status.pt.x = 3;
-    status.pt.y = 6;
+    status.pt = {3,6};
     status.tool_down=false;
     pthread_mutex_init(&status.mutex, NULL);
 
@@ -202,13 +200,13 @@ int main (int argc, char **argv)
             printf("\r");
 
             pthread_mutex_lock(&status.mutex);
-            status.pt.x += (float)((int)-axis[0]) * 1.0 / 65535 / 100;
-            status.pt.y += (float)((int) axis[1]) * 1.0 / 65535 / 100;
+            status.pt.x() += (float)((int)-axis[0]) * 1.0 / 65535 / 100;
+            status.pt.y() += (float)((int) axis[1]) * 1.0 / 65535 / 100;
 
-            if( status.pt.x > 5.5  ) status.pt.x = 5.5;
-            if( status.pt.y > 11.5 ) status.pt.y = 11.5;
-            if( status.pt.x < .5   ) status.pt.x = .5;
-            if( status.pt.y < .5   ) status.pt.y = .5;
+            if( status.pt.x() > 5.5  ) status.pt.x() = 5.5;
+            if( status.pt.y() > 11.5 ) status.pt.y() = 11.5;
+            if( status.pt.x() < .5   ) status.pt.x() = .5;
+            if( status.pt.y() < .5   ) status.pt.y() = .5;
 
             pthread_mutex_unlock( &status.mutex );
 

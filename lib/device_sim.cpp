@@ -22,6 +22,7 @@
  * libcutter Developers @ Cowtown Computer Congress
  * 3101 Mercier Street #404, Kansas City, MO 64111
  */
+
 #include <stdint.h>
 #include <unistd.h>
 #include "device_sim.hpp"
@@ -33,7 +34,7 @@
 #define DPI_X 100
 #define DPI_Y 100
 
-#define DEFAULT_SIZE_X 12
+#define DEFAULT_SIZE_X 6
 #define DEFAULT_SIZE_Y 12
 
 #define WIDTH  ( ( DPI_X ) * ( DEFAULT_SIZE_X ) )
@@ -48,8 +49,8 @@ namespace Device
     {
         running            = false;
         image              = NULL;
-        current_position.x = 0;
-        current_position.y = 0;
+        current_position.x() = 0;
+        current_position.y() = 0;
         tool_width         = 1;
     }
 
@@ -58,12 +59,12 @@ namespace Device
         output_filename    = filename;
         running            = false;
         image              = NULL;
-        current_position.x = 0;
-        current_position.y = 0;
+        current_position.x() = 0;
+        current_position.y() = 0;
         tool_width         = 1;
     }
 
-    bool CV_sim::move_to(const xy & aPoint )
+    bool CV_sim::move_to(const xy& aPoint )
     {
         if( !running )
         {
@@ -76,22 +77,20 @@ namespace Device
 
     bool CV_sim::cut_to(const xy & aPoint )
     {
-        xy next_position;
         xy external_cur_posn = convert_to_external( current_position );
 
-        double distance = sqrt( ( external_cur_posn.x - aPoint.x ) * ( external_cur_posn.x - aPoint.x ) +
-            ( external_cur_posn.y - aPoint.y ) * ( external_cur_posn.y - aPoint.y ) );
+        double distance = ( external_cur_posn - aPoint ).norm();
 
         if( !running )
         {
             return false;
         }
 
-        next_position = convert_to_internal( aPoint );
+        xy next_position = convert_to_internal( aPoint );
 
         if( image != NULL )
         {
-            lineRGBA( image, current_position.x, current_position.y, next_position.x, next_position.y, 250, 50, 50, 200 );
+            lineRGBA( image, current_position.x(), current_position.y(), next_position.x(), next_position.y(), 250, 50, 50, 200 );
             SDL_Flip( image );
             usleep( 100000 * distance );
         }
@@ -102,51 +101,26 @@ namespace Device
 
     bool CV_sim::curve_to(const xy & p0, const xy & p1, const xy & p2, const xy & p3 )
     {
-        #define A 0
-        #define B 1
-        #define C 2
-        #define NUM_FACT 3
-        #define X 0
-        #define Y 1
-        #define NUM_DIM 2
-
-        #define NUM_SECTIONS_PER_CURVE 20
-
-        double coeff[ NUM_FACT ][ NUM_DIM ];
-        xy iter;
-        double t;
+        constexpr size_t NUM_SECTIONS_PER_CURVE{ 20 };
 
         if( !running )
         {
             return false;
         }
 
-        coeff[C][X] = 3 * ( p1.x - p0.x );
-        coeff[B][X] = 3 * ( p2.x - p1.x ) - coeff[C][X];
-        coeff[A][X] = ( p3.x - p0.x ) - coeff[C][X] - coeff[B][X];
-
-        coeff[C][Y] = 3 * ( p1.y - p0.y );
-        coeff[B][Y] = 3 * ( p2.y - p1.y ) - coeff[C][Y];
-        coeff[A][Y] = ( p3.y - p0.y ) - coeff[C][Y] - coeff[B][Y];
+        auto coeffC = 3 * ( p1 - p0 );
+        auto coeffB = 3 * ( p2 - p1 ) - coeffC;
+        auto coeffA = ( p3 - p0 ) - coeffC - coeffB;
 
         move_to( p0 );
-        for( int i = 1; i <= NUM_SECTIONS_PER_CURVE; ++i )
+        for( size_t i = 1; i <= NUM_SECTIONS_PER_CURVE; ++i )
         {
-            t = (double)i / (double)NUM_SECTIONS_PER_CURVE;
-            iter.x = coeff[A][X] * t * t * t + coeff[B][X] * t * t + coeff[C][X] * t + p0.x;
-            iter.y = coeff[A][Y] * t * t * t + coeff[B][Y] * t * t + coeff[C][Y] * t + p0.y;
+            const auto t = static_cast<double>(i) / static_cast<double>(NUM_SECTIONS_PER_CURVE);
+            const auto iter = coeffA * t * t * t + coeffB * t * t + coeffC * t + p0;
             cut_to( iter );
         }
 
         return true;
-        #undef A
-        #undef B
-        #undef C
-        #undef X
-        #undef Y
-        #undef NUM_FACT
-        #undef NUM_DIM
-        #undef NUM_SECTIONS_PER_CURVE
     }
 
     bool CV_sim::start()
@@ -175,30 +149,17 @@ namespace Device
 
     xy CV_sim::convert_to_internal( const xy & input )
     {
-        xy buf;
-
-        buf.x = input.x * DPI_X;
-        buf.y = input.y * DPI_Y;
-
-        return buf;
+        return input * static_cast<double>(DPI_X);
     }
 
     xy CV_sim::convert_to_external( const xy & input )
     {
-        xy buf;
-
-        buf.x = input.x / DPI_X;
-        buf.y = input.y / DPI_Y;
-
-        return buf;
+        return input / static_cast<double>(DPI_X);
     }
 
     xy CV_sim::get_dimensions( void )
     {
-        xy buf;
-        buf.x = DEFAULT_SIZE_X;
-        buf.y = DEFAULT_SIZE_Y;
-        return buf;
+        return { DEFAULT_SIZE_X, DEFAULT_SIZE_Y };
     }
 
     bool CV_sim::set_tool_width( const float temp_tool_width )
@@ -219,11 +180,11 @@ namespace Device
     {
         SDL_Surface * new_image = SDL_ConvertSurface( image, image->format, 0);
 
-        ellipseRGBA( new_image, current_position.x, current_position.y, 10, 10, 50, 250, 50, 200 );
-        aalineRGBA( new_image, current_position.x + 5, current_position.y + 5, current_position.x - 5, current_position.y - 5, 250, 50, 50, 200 );
-        aalineRGBA( new_image, current_position.x + 5, current_position.y - 5, current_position.x - 5, current_position.y + 5, 250, 50, 50, 200 );
+        ellipseRGBA( new_image, current_position.x(), current_position.y(), 10, 10, 50, 250, 50, 200 );
+        aalineRGBA( new_image, current_position.x() + 5, current_position.y() + 5, current_position.x() - 5, current_position.y() - 5, 250, 50, 50, 200 );
+        aalineRGBA( new_image, current_position.x() + 5, current_position.y() - 5, current_position.x() - 5, current_position.y() + 5, 250, 50, 50, 200 );
 
         return new_image;
     }
 
-}                                /* end namespace*/
+} /* end namespace */

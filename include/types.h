@@ -22,19 +22,17 @@
  * libcutter Developers @ Cowtown Computer Congress
  * 3101 Mercier Street #404, Kansas City, MO 64111
  */
-#ifndef TYPES_H
-#define TYPES_H
+#pragma once
 
 #include <stdint.h>
+#include <array>
+#include <eigen3/Eigen/Eigen>
 
-struct xy
+using xy = Eigen::Vector2d;
+using ckey_type = std::array<uint32_t,4>;
+
+inline std::ostream& operator<<(std::ostream& os, const xy& point)
 {
-    double x;
-    double y;
-	xy(){};
-	xy(double _x, double _y){x=_x;y=_y;};
-	~xy(){};
-};
-
-typedef uint32_t ckey_type[4];
-#endif
+    os << "(" << point.x() << ", " << point.y() << ")";
+    return os;
+}

@@ -48,15 +48,15 @@ namespace Device
             /* virtual */ xy   get_dimensions();
             inline void set_move_key( ckey_type k )
             {
-                memcpy( m_move_key, k, sizeof(ckey_type) );
+                m_move_key = k;
             }
             inline void set_line_key( ckey_type k )
             {
-                memcpy( m_line_key, k, sizeof(ckey_type) );
+                m_line_key=k;
             }
             inline void set_curve_key( ckey_type k )
             {
-                memcpy( m_curve_key, k, sizeof(ckey_type) );
+                m_curve_key=k;
             }
             inline bool is_open()
             {
@@ -72,7 +72,7 @@ namespace Device
                 return 12345;
             };
             xy convert_to_internal( const xy &input );
-            bool do_command( const xy &pt, const ckey_type k );
+            bool do_command( const xy& pt, const ckey_type& k );
             ckey_type m_move_key;
             ckey_type m_line_key;
             ckey_type m_curve_key;

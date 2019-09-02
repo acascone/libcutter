@@ -23,7 +23,7 @@ class svg_render_state_t
         xy get_last_moved_to( void ){ return last_moved_to; }
         void path_arc_segment( const xy & center, double th0, double th1, double rx, double ry, double x_axis_rotation );
     private:
-        double transform[3][3];
+        Eigen::Affine2d transform;
         xy last_moved_to;
         xy cur_posn;
         Device::Generic & device;

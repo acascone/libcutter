@@ -90,8 +90,7 @@ void * thread( void * ptr )
     pthread_mutex_lock(&status->mutex);
     while( status->running )
     {
-        temp.x = status->pt.x;
-        temp.y = status->pt.y;
+        temp = status->pt;
         if( status->tool_down )
         {
             pthread_mutex_unlock(&status->mutex);
@@ -120,8 +119,7 @@ int main (int argc, char **argv)
     char name[NAME_LENGTH] = "Unknown";
     run_data status;
     status.running = true;
-    status.pt.x = 3;
-    status.pt.y = 4;
+    status.pt = {3, 4};
     status.tool_down=false;
     pthread_mutex_init(&status.mutex, NULL);
 
@@ -202,9 +200,9 @@ int main (int argc, char **argv)
             printf("\r");
 
             pthread_mutex_lock(&status.mutex);
-            status.pt.x = (float)(((int)-axis[0])+32767) * 6.0 / 65535;
-            status.pt.y = (float)(((int) axis[1])+32767) * 6.0 / 65535 + 3;
-            cout<<"moving to:"<<status.pt.x<<' '<<status.pt.y<<endl;
+            status.pt.x() = (float)(((int)-axis[0])+32767) * 6.0 / 65535;
+            status.pt.y() = (float)(((int) axis[1])+32767) * 6.0 / 65535 + 3;
+            cout<<"moving to:"<<status.pt<<endl;
             pthread_mutex_unlock(&status.mutex);
 
             fflush(stdout);

@@ -112,33 +112,28 @@ namespace Device
 
     xy C::convert_to_internal( const xy &input )
     {
-        xy buf;
-        buf.x = INCHES_TO_C_UNITS * input.x;
-        buf.y = INCHES_TO_C_UNITS * input.y;
-        return buf;
+        return INCHES_TO_C_UNITS * input;
     }
 
-    bool C::do_command( const xy &pt, const ckey_type k )
+    bool C::do_command( const xy& pt, const ckey_type& k )
     {
-        uint8_t rbuf[5];
         xy ptbuffer = convert_to_internal( pt );
         lmc_command l;
-
         l.bytes  =13;
         l.cmd    = 0x40;
         l.data[0]=htocl( get_rand() );
-        l.data[1]=htocl( ptbuffer.y );
-        l.data[2]=htocl( ptbuffer.x );
-        btea(l.data, 3, k );
+        l.data[1]=htocl( ptbuffer.y() );
+        l.data[2]=htocl( ptbuffer.x() );
+        btea( l.data, 3, k.data() );
 
         bool ret = false;
         if( m_serial.p_write( (uint8_t*)&l, sizeof( l ) ) == sizeof( l ) )
         {
+            uint8_t rbuf[5];
             int num_chars = m_serial.p_read( rbuf, sizeof( rbuf ) );
             if ( 5 != num_chars )
             {
                 std::cout << "expected 5, got " << num_chars << std::endl;
-                assert( false );
             }
             ret = true;
         }
@@ -147,10 +142,7 @@ namespace Device
 
     xy C::get_dimensions()
     {
-        xy buf;
-        buf.x = 6;
-        buf.y = 12;
-        return buf;
+        return {6, 12};
     }
 }
 

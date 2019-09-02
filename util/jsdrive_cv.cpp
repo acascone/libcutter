@@ -133,8 +133,8 @@ int main (int argc, char **argv)
 
             printf("\r");
 
-            pt.x = (float)(((int) axis[0])+32767) * 6.0 / 65535;
-            pt.y = (float)(((int) axis[1])+32767) * 6.0 / 65535;
+            pt.x() = (double)(((int) axis[0])+32767) * 6.0 / 65535;
+            pt.y() = (double)(((int) axis[1])+32767) * 6.0 / 65535;
 
             fflush(stdout);
         }

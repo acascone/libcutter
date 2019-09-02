@@ -33,19 +33,19 @@ void svg_render_state_t::path_arc_segment( const xy & center, double th0, double
 
     th_half = 0.5 * (th1 - th0);
     t = (8.0 / 3.0) * sin (th_half * 0.5) * sin (th_half * 0.5) / sin (th_half);
-    pt1.x = center.x + cos (th0) - t * sin (th0);
-    pt1.y = center.y + sin (th0) + t * cos (th0);
-    pt3.x = center.x + cos (th1);
-    pt3.y = center.y + sin (th1);
-    pt2.x = pt3.x + t * sin (th1);
-    pt2.y = pt3.y - t * cos (th1);
+    pt1.x() = center.x() + cos (th0) - t * sin (th0);
+    pt1.y() = center.y() + sin (th0) + t * cos (th0);
+    pt3.x() = center.x() + cos (th1);
+    pt3.y() = center.y() + sin (th1);
+    pt2.x() = pt3.x() + t * sin (th1);
+    pt2.y() = pt3.y() - t * cos (th1);
 
-    pt1.x = pt1.x * a00 + a01 * pt1.y;
-    pt1.y = pt1.x * a10 + a11 * pt1.y;
-    pt2.x = pt2.x * a00 + a01 * pt2.y;
-    pt2.y = pt2.x * a10 + a11 * pt2.y;
-    pt3.x = pt3.x * a00 + a01 * pt3.y;
-    pt3.y = pt3.x * a10 + a11 * pt3.y;
+    pt1.x() = pt1.x() * a00 + a01 * pt1.y();
+    pt1.y() = pt1.x() * a10 + a11 * pt1.y();
+    pt2.x() = pt2.x() * a00 + a01 * pt2.y();
+    pt2.y() = pt2.x() * a10 + a11 * pt2.y();
+    pt3.x() = pt3.x() * a00 + a01 * pt3.y();
+    pt3.y() = pt3.x() * a10 + a11 * pt3.y();
 
     curve_to( cur_posn, pt1, pt2, pt3 );
 }
@@ -86,44 +86,20 @@ device = tempdev;
 
 void svg_render_state_t::set_transform( double a, double b, double c, double d, double e, double f )
 {
-    transform[0][0] = a;
-    transform[0][1] = c;
-    transform[0][2] = e;
-    transform[1][0] = b;
-    transform[1][1] = d;
-    transform[1][2] = f;
-    transform[2][0] = 0;
-    transform[2][1] = 0;
-    transform[2][2] = 1;
+    transform.linear() << a, c, b, d;
+    transform.translation() << e, f;
 }
 
 
 xy svg_render_state_t::apply_transform( const xy & pt )
 {
-    xy buf;
-    double scalar;
+    xy buf{ transform * pt };
 
-    buf.x  = transform[0][0] * pt.x + transform[0][1] * pt.y + transform[0][2] * 1.0;
-    buf.y  = transform[1][0] * pt.x + transform[1][1] * pt.y + transform[1][2] * 1.0;
-    scalar = transform[2][0] * pt.x + transform[2][1] * pt.y + transform[2][2] * 1.0;
-
-    if( scalar == 0 )
-    {
-        buf.x = 0;
-        buf.y = 0;
-    }
-    else
-    {
-        buf.x /= scalar;
-        buf.y /= scalar;
-    }
-
-    buf.x /= 100;
-    buf.y /= 100;
+    buf /= 100;
 
     //Add a half-inch. This should prevent the mat from fallingout of the device
     //Also, paperspace now reduced by half-inch
-    buf.y += paper_padding;
+    buf.y() += paper_padding;
 
     return buf;
 }
@@ -169,12 +145,8 @@ svg_status_t end_element_callback( void * ptr )
 
 svg_status_t move_callback( void * ptr, double x, double y )
 {
-    xy pt;
+    xy pt{x,y};
     //cout << "Moving to "<<x<<','<<y<<endl;
-
-    pt.x = x;
-    pt.y = y;
-
     ((svg_render_state_t*)ptr)->move_to( pt );
     return SVG_STATUS_SUCCESS;
 }
@@ -182,13 +154,8 @@ svg_status_t move_callback( void * ptr, double x, double y )
 
 svg_status_t line_callback( void * ptr, double x, double y )
 {
-    xy point;
-
+    xy point{x,y};
     //cout << "Cutting to "<<x<<','<<y<<endl;
-
-    point.x = x;
-    point.y = y;
-
     ((svg_render_state_t*)ptr)->cut_to( point );
     return SVG_STATUS_SUCCESS;
 }
@@ -255,7 +222,7 @@ double y )
     double d, sfactor, sfactor_sq;
     double th0, th1, th_arc;
     int i, n_segs;
-    double dx, dy, dx1, dy1, Pr1, Pr2, Px, Py, check;
+    double dx1, dy1, Pr1, Pr2, Px, Py, check;
 
     //cout<<"Doing an arc at"<<x<<','<<y<<" with rx="<<rx<<" and ry="<<ry<<endl;
     //cout<<"    with large_arc_flag="<<large_arc_flag<<endl;
@@ -269,10 +236,10 @@ double y )
     sin_th = sin (x_axis_rotation * (M_PI / 180.0));
     cos_th = cos (x_axis_rotation * (M_PI / 180.0));
 
-    dx = (cur_posn.x - x) / 2.0;
-    dy = (cur_posn.y - y) / 2.0;
-    dx1 =  cos_th * dx + sin_th * dy;
-    dy1 = -sin_th * dx + cos_th * dy;
+    xy pt{x,y};
+    xy delta{ (cur_posn - pt) / 2.0 };
+    dx1 =  cos_th * delta.x() + sin_th * delta.y();
+    dy1 = -sin_th * delta.x() + cos_th * delta.y();
     Pr1 = rx * rx;
     Pr2 = ry * ry;
     Px = dx1 * dx1;
@@ -289,26 +256,26 @@ double y )
     a01 = sin_th / rx;
     a10 = -sin_th / ry;
     a11 = cos_th / ry;
-    pt0.x = a00 * cur_posn.x + a01 * cur_posn.y;
-    pt0.y = a10 * cur_posn.x + a11 * cur_posn.y;
-    pt1.x = a00 * x + a01 * y;
-    pt1.y = a10 * x + a11 * y;
+    pt0.x() = a00 * cur_posn.x() + a01 * cur_posn.y();
+    pt0.y() = a10 * cur_posn.x() + a11 * cur_posn.y();
+    pt1.x() = a00 * x + a01 * y;
+    pt1.y() = a10 * x + a11 * y;
     /* (x0, y0) is current point in transformed coordinate space.
        (x1, y1) is new point in transformed coordinate space.
 
        The arc fits a unit-radius circle in this space.
     */
-    d = (pt1.x - pt0.x) * (pt1.x - pt0.x) + (pt1.y - pt0.y) * (pt1.y - pt0.y);
+    d = (pt1 - pt0).squaredNorm();
     sfactor_sq = 1.0 / d - 0.25;
     if (sfactor_sq < 0) sfactor_sq = 0;
     sfactor = sqrt (sfactor_sq);
     if (sweep_flag == large_arc_flag) sfactor = -sfactor;
-    center.x = 0.5 * (pt0.x + pt1.x) - sfactor * (pt1.y - pt0.y);
-    center.y = 0.5 * (pt0.y + pt1.y) + sfactor * (pt1.x - pt0.x);
+    center.x() = 0.5 * (pt0.x() + pt1.x()) - sfactor * (pt1.y() - pt0.y());
+    center.y() = 0.5 * (pt0.y() + pt1.y()) + sfactor * (pt1.x() - pt0.x());
     /* (xc, yc) is center of the circle. */
 
-    th0 = atan2 (pt0.y - center.y, pt0.x - center.x);
-    th1 = atan2 (pt1.y - center.y, pt1.x - center.x);
+    th0 = atan2 (pt0.y() - center.y(), pt0.x() - center.x());
+    th1 = atan2 (pt1.y() - center.y(), pt1.x() - center.x());
 
     th_arc = th1 - th0;
 
@@ -526,51 +493,51 @@ svg_status_t render_ellipse_callback( void * ptr, svg_length_t * cx, svg_length_
 
     for( int i = 0; i < 12; ++i )
     {
-        control_pts[i].x = cx->value;
-        control_pts[i].y = cy->value;
+        control_pts[i].x() = cx->value;
+        control_pts[i].y() = cy->value;
     }
 
     #define KAPPA .55228475
 
     //Right
-    control_pts[ 0].x += rx->value;
-    control_pts[ 0].y += 0.0;
+    control_pts[ 0].x() += rx->value;
+    control_pts[ 0].y() += 0.0;
 
-    control_pts[ 1].x += rx->value;
-    control_pts[ 1].y += ry->value * KAPPA;
+    control_pts[ 1].x() += rx->value;
+    control_pts[ 1].y() += ry->value * KAPPA;
 
-    control_pts[ 2].x += rx->value * KAPPA;
-    control_pts[ 2].y += ry->value;
+    control_pts[ 2].x() += rx->value * KAPPA;
+    control_pts[ 2].y() += ry->value;
 
     //Top
-    control_pts[ 3].x -= 0.0;
-    control_pts[ 3].y += ry->value;
+    control_pts[ 3].x() -= 0.0;
+    control_pts[ 3].y() += ry->value;
 
-    control_pts[ 4].x -= rx->value * KAPPA;
-    control_pts[ 4].y += ry->value;
+    control_pts[ 4].x() -= rx->value * KAPPA;
+    control_pts[ 4].y() += ry->value;
 
-    control_pts[ 5].x -= rx->value;
-    control_pts[ 5].y += ry->value * KAPPA;
+    control_pts[ 5].x() -= rx->value;
+    control_pts[ 5].y() += ry->value * KAPPA;
 
     //Left
-    control_pts[ 6].x -= rx->value;
-    control_pts[ 6].y -= 0.0;
+    control_pts[ 6].x() -= rx->value;
+    control_pts[ 6].y() -= 0.0;
 
-    control_pts[ 7].x -= rx->value;
-    control_pts[ 7].y -= ry->value * KAPPA;
+    control_pts[ 7].x() -= rx->value;
+    control_pts[ 7].y() -= ry->value * KAPPA;
 
-    control_pts[ 8].x -= rx->value * KAPPA;
-    control_pts[ 8].y -= ry->value;
+    control_pts[ 8].x() -= rx->value * KAPPA;
+    control_pts[ 8].y() -= ry->value;
 
     //Bottom
-    control_pts[ 9].x += 0.0;
-    control_pts[ 9].y -= ry->value;
+    control_pts[ 9].x() += 0.0;
+    control_pts[ 9].y() -= ry->value;
 
-    control_pts[10].x += rx->value * KAPPA;
-    control_pts[10].y -= ry->value;
+    control_pts[10].x() += rx->value * KAPPA;
+    control_pts[10].y() -= ry->value;
 
-    control_pts[11].x += rx->value;
-    control_pts[11].y -= ry->value * KAPPA;
+    control_pts[11].x() += rx->value;
+    control_pts[11].y() -= ry->value * KAPPA;
 
     ((svg_render_state_t*)ptr)->curve_to(
         control_pts[ 0],
@@ -641,46 +608,46 @@ svg_length_t * ry_len )
 
     if( rx > 0 || ry > 0 )
     {
-        point.x = x + rx;
-        point.y = y;
+        point.x() = x + rx;
+        point.y() = y;
         ((svg_render_state_t*)ptr)->move_to( point );
 
-        point.x = x + width - rx;
+        point.x() = x + width - rx;
         ((svg_render_state_t*)ptr)->cut_to( point );
 
         arc_callback( ptr, rx, ry, 0, 0, 1, x + width, y + ry );
 
-        point.x = x + width;
-        point.y = y + height - ry;
+        point.x() = x + width;
+        point.y() = y + height - ry;
         ((svg_render_state_t*)ptr)->cut_to( point );
 
         arc_callback( ptr, rx, ry, 0, 0, 1, x + width - rx, y + height );
 
-        point.x = x + rx;
-        point.y = y + height;
+        point.x() = x + rx;
+        point.y() = y + height;
         ((svg_render_state_t*)ptr)->cut_to( point );
 
         arc_callback( ptr, rx, ry, 0, 0, 1, x, y + height - ry );
 
-        point.x = x;
-        point.y = y + ry;
+        point.x() = x;
+        point.y() = y + ry;
         ((svg_render_state_t*)ptr)->cut_to( point );
 
         arc_callback( ptr, rx, ry, 0, 0, 1, x + rx, y );
     }
     else
     {
-        point.x = x;
-        point.y = y;
+        point.x() = x;
+        point.y() = y;
         ((svg_render_state_t*)ptr)->move_to( point );
 
-        point.x += width;
+        point.x() += width;
         ((svg_render_state_t*)ptr)->cut_to( point );
 
-        point.y += height;
+        point.y() += height;
         ((svg_render_state_t*)ptr)->cut_to( point );
 
-        point.x -= width;
+        point.x() -= width;
         ((svg_render_state_t*)ptr)->cut_to( point );
     }
     close_path_callback( ptr );

@@ -46,35 +46,35 @@ int main( int numArgs, char * args[] )
         {
             case 'm':
             case 'M':
-                inputfile >> point.x;
-                inputfile >> point.y;
-                cout << "Moving to " << point.x << ',' << point.y << endl;
+                inputfile >> point.x();
+                inputfile >> point.y();
+                cout << "Moving to " << point << endl;
                 c.move_to( point );
                 break;
 
             case 'c':
             case 'C':
-                inputfile >> point.x;
-                inputfile >> point.y;
-                cout << "Cutting to " << point.x << ',' << point.y << endl;
+                inputfile >> point.x();
+                inputfile >> point.y();
+                cout << "Cutting to " << point << endl;
                 c.cut_to( point );
                 break;
 
             case 'b':
             case 'B':
-                inputfile >> curve_pts[0].x;
-                inputfile >> curve_pts[0].y;
-                inputfile >> curve_pts[1].x;
-                inputfile >> curve_pts[1].y;
-                inputfile >> curve_pts[2].x;
-                inputfile >> curve_pts[2].y;
-                inputfile >> curve_pts[3].x;
-                inputfile >> curve_pts[3].y;
+                inputfile >> curve_pts[0].x();
+                inputfile >> curve_pts[0].y();
+                inputfile >> curve_pts[1].x();
+                inputfile >> curve_pts[1].y();
+                inputfile >> curve_pts[2].x();
+                inputfile >> curve_pts[2].y();
+                inputfile >> curve_pts[3].x();
+                inputfile >> curve_pts[3].y();
                 cout<< "Bezier pts: "
-                    << curve_pts[0].x << ',' << curve_pts[0].y << '\t'
-                    << curve_pts[1].x << ',' << curve_pts[1].y << '\t'
-                    << curve_pts[2].x << ',' << curve_pts[2].y << '\t'
-                    << curve_pts[3].x << ',' << curve_pts[3].y << endl;
+                    << curve_pts[0] << '\t'
+                    << curve_pts[1] << '\t'
+                    << curve_pts[2] << '\t'
+                    << curve_pts[3] << endl;
                 c.curve_to( curve_pts[0], curve_pts[1], curve_pts[2], curve_pts[3] );
                 break;
 
