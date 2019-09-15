@@ -179,15 +179,19 @@ svg_status_t curve_callback( void * ptr, double x1, double y1, double x2, double
 
 svg_status_t quadratic_curve_callback( void * ptr, double x1, double y1, double x2, double y2 )
 {
-    xy p1 = { x1, y1 };
-    xy p2 = { x2, y2 };
+    auto state{ static_cast<svg_render_state_t*>(ptr) };
+    // http://fontforge.github.io/bezier.html
+    const xy QP0{ state->get_cur_posn() };
+    const xy QP1{ x1, y1 };
+    const xy QP2{ x2, y2 };
+
+    const xy CP0{QP0};
+    const xy CP1{QP0 + 2.0/3.0 * (QP1-QP0)};
+    const xy CP2{QP2 + 2.0/3.0 * (QP1-QP2)};
+    const xy CP3{QP2};
 
     //cout <<"Doing a quadratic curve"<<endl;
-    ((svg_render_state_t*)ptr)->curve_to(
-        ((svg_render_state_t*)ptr)->get_cur_posn(),
-        p1,
-        p1,
-        p2);
+    state->curve_to(CP0, CP1, CP2, CP3);
     return SVG_STATUS_SUCCESS;
 }
 
