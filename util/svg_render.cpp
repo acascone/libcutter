@@ -14,38 +14,17 @@ using namespace std;
 --------------------------------------------------*/
 void svg_render_state_t::path_arc_segment( const xy & center, double th0, double th1, double rx, double ry, double x_axis_rotation )
 {
-    double sin_th, cos_th;
-    double a00, a01, a10, a11;
-    xy pt1, pt2, pt3;
-    double t;
-    double th_half;
-    sin_th = sin (x_axis_rotation * (M_PI / 180.0));
-    cos_th = cos (x_axis_rotation * (M_PI / 180.0));
+    const Eigen::Affine2d rotateAndScale{ Eigen::Rotation2Dd( x_axis_rotation * (M_PI / 180.0) ) * Eigen::Scaling( rx, ry ) };
+    const double th_half{ 0.5 * (th1 - th0) };
+    const double t{ (8.0 / 3.0) * sin (th_half * 0.5) * sin (th_half * 0.5) / sin (th_half) };
+    xy pt0{ center + xy{ cos(th0), sin(th0) } };
+    xy pt3{ center + xy{ cos(th1), sin(th1) } };
+    xy pt1{ pt0 + t * xy{ -sin(th0), cos(th0) } };
+    xy pt2{ pt3 - t * xy{ -sin(th1), cos(th1) } };
 
-    //cout<<"    path arc segment at "<<center.x<<','<<center.y<<" th0="<<th0<<" th1="<<th1<<endl;
-    //cout<<"        rx="<<rx<<" ry="<<ry<<" rot="<<x_axis_rotation<<endl;
-
-    /* inverse transform compared with rsvg_path_arc */
-    a00 = cos_th * rx;
-    a01 = -sin_th * ry;
-    a10 = sin_th * rx;
-    a11 = cos_th * ry;
-
-    th_half = 0.5 * (th1 - th0);
-    t = (8.0 / 3.0) * sin (th_half * 0.5) * sin (th_half * 0.5) / sin (th_half);
-    pt1.x() = center.x() + cos (th0) - t * sin (th0);
-    pt1.y() = center.y() + sin (th0) + t * cos (th0);
-    pt3.x() = center.x() + cos (th1);
-    pt3.y() = center.y() + sin (th1);
-    pt2.x() = pt3.x() + t * sin (th1);
-    pt2.y() = pt3.y() - t * cos (th1);
-
-    pt1 = {pt1.x() * a00 + a01 * pt1.y(),
-           pt1.x() * a10 + a11 * pt1.y()};
-    pt2 = {pt2.x() * a00 + a01 * pt2.y(),
-           pt2.x() * a10 + a11 * pt2.y()};
-    pt3 = {pt3.x() * a00 + a01 * pt3.y(),
-           pt3.x() * a10 + a11 * pt3.y()};
+    pt1 = rotateAndScale * pt1;
+    pt2 = rotateAndScale * pt2;
+    pt3 = rotateAndScale * pt3;
 
     curve_to( cur_posn, pt1, pt2, pt3 );
 }
@@ -163,16 +142,14 @@ svg_status_t line_callback( void * ptr, double x, double y )
 
 svg_status_t curve_callback( void * ptr, double x1, double y1, double x2, double y2, double x3, double y3 )
 {
-    xy p1 = { x1, y1 };
-    xy p2 = { x2, y2 };
-    xy p3 = { x3, y3 };
+    auto state{ static_cast<svg_render_state_t*>(ptr) };
+    const xy CP0{state->get_cur_posn()};
+    const xy CP1{x1, y1};
+    const xy CP2{x2, y2};
+    const xy CP3{x3, y3};
 
     //cout <<"Doing a curve!"<<endl;
-    ((svg_render_state_t*)ptr)->curve_to(
-        ((svg_render_state_t*)ptr)->get_cur_posn(),
-        p1,
-        p2,
-        p3);
+    state->curve_to(CP0, CP1, CP2, CP3);
     return SVG_STATUS_SUCCESS;
 }
 
