@@ -40,12 +40,12 @@ void svg_render_state_t::path_arc_segment( const xy & center, double th0, double
     pt2.x() = pt3.x() + t * sin (th1);
     pt2.y() = pt3.y() - t * cos (th1);
 
-    pt1.x() = pt1.x() * a00 + a01 * pt1.y();
-    pt1.y() = pt1.x() * a10 + a11 * pt1.y();
-    pt2.x() = pt2.x() * a00 + a01 * pt2.y();
-    pt2.y() = pt2.x() * a10 + a11 * pt2.y();
-    pt3.x() = pt3.x() * a00 + a01 * pt3.y();
-    pt3.y() = pt3.x() * a10 + a11 * pt3.y();
+    pt1 = {pt1.x() * a00 + a01 * pt1.y(),
+           pt1.x() * a10 + a11 * pt1.y()};
+    pt2 = {pt2.x() * a00 + a01 * pt2.y(),
+           pt2.x() * a10 + a11 * pt2.y()};
+    pt3 = {pt3.x() * a00 + a01 * pt3.y(),
+           pt3.x() * a10 + a11 * pt3.y()};
 
     curve_to( cur_posn, pt1, pt2, pt3 );
 }
