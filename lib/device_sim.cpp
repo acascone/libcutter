@@ -34,13 +34,20 @@
 #define DPI_X 100
 #define DPI_Y 100
 
-#define DEFAULT_SIZE_X 6
+#define DEFAULT_SIZE_X 12
 #define DEFAULT_SIZE_Y 12
 
 #define WIDTH  ( ( DPI_X ) * ( DEFAULT_SIZE_X ) )
 #define HEIGHT ( ( DPI_Y ) * ( DEFAULT_SIZE_Y ) )
 
 #define DEPTH 32
+
+constexpr Uint32 ColorRed{ 0xFA3232FF };
+constexpr Uint32 ColorGreen{ 0x32FA32FF };
+constexpr Uint32 ColorBlue{ 0x3232FAFF };
+constexpr Uint32 ColorOrange{ 0xFFD700FF };
+
+constexpr Uint32 TimeScalar{ 100000 };
 
 namespace Device
 {
@@ -66,16 +73,38 @@ namespace Device
 
     bool CV_sim::move_to(const xy& aPoint )
     {
+        return move_to(aPoint, ColorGreen );
+    }
+
+    bool CV_sim::move_to(const xy& aPoint, Uint32 color )
+    {
         if( !running )
         {
             return false;
         }
 
-        current_position = convert_to_internal( aPoint );
+        const xy external_cur_posn{ convert_to_external( current_position ) };
+        const double distance{ ( external_cur_posn - aPoint ).norm() };
+        const xy next_position{ convert_to_internal( aPoint ) };
+
+        if( image != NULL )
+        {
+            lineColor( image, current_position.x(), current_position.y(), next_position.x(), next_position.y(), color );
+            SDL_Flip( image );
+            usleep( TimeScalar * distance );
+        }
+
+        current_position = next_position;
         return true;
     }
 
-    bool CV_sim::cut_to(const xy & aPoint )
+
+    bool CV_sim::cut_to(const xy & aPoint)
+    {
+        return cut_to(aPoint, ColorRed );
+    }
+
+    bool CV_sim::cut_to(const xy & aPoint, Uint32 color )
     {
         xy external_cur_posn = convert_to_external( current_position );
 
@@ -90,9 +119,9 @@ namespace Device
 
         if( image != NULL )
         {
-            lineRGBA( image, current_position.x(), current_position.y(), next_position.x(), next_position.y(), 250, 50, 50, 200 );
+            lineColor( image, current_position.x(), current_position.y(), next_position.x(), next_position.y(), color );
             SDL_Flip( image );
-            usleep( 100000 * distance );
+            usleep( TimeScalar * distance );
         }
 
         current_position = next_position;
@@ -112,12 +141,12 @@ namespace Device
         auto coeffB = 3 * ( p2 - p1 ) - coeffC;
         auto coeffA = ( p3 - p0 ) - coeffC - coeffB;
 
-        move_to( p0 );
+        move_to( p0, ColorOrange );
         for( size_t i = 1; i <= NUM_SECTIONS_PER_CURVE; ++i )
         {
             const auto t = static_cast<double>(i) / static_cast<double>(NUM_SECTIONS_PER_CURVE);
             const auto iter = coeffA * t * t * t + coeffB * t * t + coeffC * t + p0;
-            cut_to( iter );
+            cut_to( iter, ColorBlue  );
         }
 
         return true;
@@ -180,9 +209,9 @@ namespace Device
     {
         SDL_Surface * new_image = SDL_ConvertSurface( image, image->format, 0);
 
-        ellipseRGBA( new_image, current_position.x(), current_position.y(), 10, 10, 50, 250, 50, 200 );
-        aalineRGBA( new_image, current_position.x() + 5, current_position.y() + 5, current_position.x() - 5, current_position.y() - 5, 250, 50, 50, 200 );
-        aalineRGBA( new_image, current_position.x() + 5, current_position.y() - 5, current_position.x() - 5, current_position.y() + 5, 250, 50, 50, 200 );
+        ellipseColor( new_image, current_position.x(), current_position.y(), 10, 10, ColorGreen );
+        aalineColor( new_image, current_position.x() + 5, current_position.y() + 5, current_position.x() - 5, current_position.y() - 5, ColorRed );
+        aalineColor( new_image, current_position.x() + 5, current_position.y() - 5, current_position.x() - 5, current_position.y() + 5, ColorRed );
 
         return new_image;
     }

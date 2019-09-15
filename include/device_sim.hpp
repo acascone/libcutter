@@ -48,6 +48,8 @@ namespace Device
             bool set_tool_width( const float tool_width );
 
         private:
+            bool move_to(const xy &aPoint, Uint32 color );
+            bool cut_to(const xy &aPoint, Uint32 color );
             xy convert_to_internal( const xy &input );
             xy convert_to_external( const xy &input );
             xy current_position;
