@@ -32,10 +32,10 @@ void svg_render_state_t::path_arc_segment( const xy & center, double th0, double
 
 bool svg_render_state_t::curve_to( const xy & pta, const xy & ptb, const xy & ptc, const xy & ptd )
 {
-    xy bufa = apply_transform( pta );
-    xy bufb = apply_transform( ptb );
-    xy bufc = apply_transform( ptc );
-    xy bufd = apply_transform( ptd );
+    const xy bufa{ apply_transform( pta ) };
+    const xy bufb{ apply_transform( ptb ) };
+    const xy bufc{ apply_transform( ptc ) };
+    const xy bufd{ apply_transform( ptd ) };
     //cout<<"    transform curve to:"<<bufa.x<<','<<bufa.y<<'\t'<<bufb.x<<','<<bufb.y<<'\t'<<bufc.x<<','<<bufc.y<<'\t'<<bufd.x<<','<<bufd.y<<endl;
     cur_posn = ptd;
     return device.curve_to( bufa, bufb, bufc, bufd );
@@ -44,10 +44,9 @@ bool svg_render_state_t::curve_to( const xy & pta, const xy & ptb, const xy & pt
 
 bool svg_render_state_t::move_to( const xy & pt )
 {
-    xy buf;
     last_moved_to = pt;
     cur_posn      = pt;
-    buf = apply_transform(pt);
+    const xy buf{ apply_transform(pt) };
     //cout<<"    transform mov to:"<<buf.x<<','<<buf.y<<endl;
     return device.move_to( buf );
 }
@@ -86,10 +85,8 @@ xy svg_render_state_t::apply_transform( const xy & pt )
 
 bool svg_render_state_t::cut_to( const xy & pt )
 {
-    xy buf;
-
     cur_posn = pt;
-    buf = apply_transform( pt );
+    const xy buf{ apply_transform( pt ) };
     //cout<<"    transform cut to:"<<buf.x<<','<<buf.y<<endl;
     return device.cut_to( buf );
 }
@@ -124,7 +121,7 @@ svg_status_t end_element_callback( void * ptr )
 
 svg_status_t move_callback( void * ptr, double x, double y )
 {
-    xy pt{x,y};
+    const xy pt{x,y};
     //cout << "Moving to "<<x<<','<<y<<endl;
     ((svg_render_state_t*)ptr)->move_to( pt );
     return SVG_STATUS_SUCCESS;
@@ -133,7 +130,7 @@ svg_status_t move_callback( void * ptr, double x, double y )
 
 svg_status_t line_callback( void * ptr, double x, double y )
 {
-    xy point{x,y};
+    const xy point{x,y};
     //cout << "Cutting to "<<x<<','<<y<<endl;
     ((svg_render_state_t*)ptr)->cut_to( point );
     return SVG_STATUS_SUCCESS;
